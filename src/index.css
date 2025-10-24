@@ -1,0 +1,312 @@
+/* IMPORTS */
+@charset "UTF-8";
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "react-datepicker/dist/react-datepicker.css";
+
+/* React DatePicker Glass Theme */
+.react-datepicker {
+  background: rgba(30, 41, 59, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  border-radius: 0.75rem !important;
+  font-family: inherit !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.react-datepicker__header {
+  background: rgba(51, 65, 85, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.3) !important;
+  border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  color: #f1f5f9 !important;
+  font-weight: 500 !important;
+}
+
+.react-datepicker__day {
+  color: #f1f5f9 !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease-in-out !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.react-datepicker__day:hover {
+  background: rgba(71, 85, 105, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  color: #f1f5f9 !important;
+  transform: translateY(-1px) !important;
+}
+
+.react-datepicker__day--selected {
+  background: rgba(148, 163, 184, 0.8) !important;
+  backdrop-filter: blur(6px) !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(148, 163, 184, 0.3) !important;
+}
+
+.react-datepicker__day--today {
+  background: rgba(71, 85, 105, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(100, 116, 139, 0.5) !important;
+  font-weight: 600 !important;
+}
+
+.react-datepicker__day--disabled {
+  color: rgba(100, 116, 139, 0.5) !important;
+  opacity: 0.4 !important;
+}
+
+.react-datepicker__navigation {
+  background: rgba(71, 85, 105, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.react-datepicker__navigation:hover {
+  background: rgba(100, 116, 139, 0.7) !important;
+  backdrop-filter: blur(6px) !important;
+  transform: scale(1.05) !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #f1f5f9 !important;
+}
+
+.react-datepicker__month-container {
+  background: transparent !important;
+}
+
+.react-datepicker__month {
+  background: transparent !important;
+}
+
+/* VARIANT SUPPORT */
+@custom-variant dark (&:is(.dark *));
+
+/* DESIGN TOKENS */
+@theme inline {
+  /* Radii */
+  --radius: 0.65rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Fonts */
+  --font-roboto: "Roboto Slab", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.5rem;
+  --text-7xl: 4rem;
+  --text-8xl: 4.5rem;
+  --text-9xl: 5rem;
+
+  /* UI Colors (alias tokens) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* LIGHT THEME — soft lilac surfaces + purple primary */
+:root,
+.theme-default {
+  --background: #faf8ff; /* page background (very light lilac) */
+  --foreground: #1f2430; /* default text (ink) */
+
+  --card: #ffffff; /* cards are white for contrast */
+  --card-foreground: #1f2430;
+
+  --popover: #ffffff;
+  --popover-foreground: #1f2430;
+
+  /* Brand / accent */
+  --primary: #751ae5; /* buttons, active states */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f2eeff; /* subtle lilac chips/blocks */
+  --secondary-foreground: #3f3f46;
+
+  --accent: #ede9fe; /* hover & soft accents */
+  --accent-foreground: #4338ca;
+
+  --muted: #f6f3ff; /* inputs / muted surfaces */
+  --muted-foreground: #6b7280;
+
+  /* Status */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Lines / focus */
+  --border: #e7e3f7; /* light lilac border */
+  --input: #e7e3f7;
+  --ring: #751ae5; /* focus ring matches brand */
+
+  /* Charts */
+  --chart-1: #751ae5;
+  --chart-2: #22c55e;
+  --chart-3: #06b6d4;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+
+  /* Sidebar */
+  --sidebar: #f9f7ff;
+  --sidebar-foreground: #1f2430;
+  --sidebar-primary: #751ae5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2eeff;
+  --sidebar-accent-foreground: #3f3f46;
+  --sidebar-border: #e7e3f7;
+  --sidebar-ring: #751ae5;
+}
+
+/* DARK THEME — indigo/lilac on near-black */
+.dark,
+.theme-default.dark {
+  --background: #131226; /* app bg (indigo-tinted) */
+  --foreground: #ededfb;
+
+  --card: #1a1830; /* lifted card */
+  --card-foreground: #ededfb;
+
+  --popover: #1a1830;
+  --popover-foreground: #ededfb;
+
+  --primary: #a78bfa; /* brighter purple for dark mode */
+  --primary-foreground: #14121f;
+
+  --secondary: #252243; /* muted blocks */
+  --secondary-foreground: #d7d6ef;
+
+  --accent: #2b2752; /* soft hover */
+  --accent-foreground: #e9e7ff;
+
+  --muted: #252243;
+  --muted-foreground: #b8b7d6;
+
+  --destructive: #f87171;
+  --destructive-foreground: #14121f;
+
+  --border: #2c2a4d; /* subtle indigo border */
+  --input: #2c2a4d;
+  --ring: #a78bfa;
+
+  --chart-1: #a78bfa;
+  --chart-2: #34d399;
+  --chart-3: #22d3ee;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+
+  --sidebar: #1a1830;
+  --sidebar-foreground: #ededfb;
+  --sidebar-primary: #a78bfa;
+  --sidebar-primary-foreground: #14121f;
+  --sidebar-accent: #252243;
+  --sidebar-accent-foreground: #d7d6ef;
+  --sidebar-border: #2c2a4d;
+  --sidebar-ring: #a78bfa;
+}
+
+/* BASE LAYER */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-roboto;
+    font-family: var(--font-roboto);
+  }
+}
+
+/* Utilities for Text Sizes */
+@layer utilities {
+  .text-xs {
+    font-size: var(--text-xs);
+  }
+  .text-sm {
+    font-size: var(--text-sm);
+  }
+  .text-base {
+    font-size: var(--text-base);
+  }
+  .text-lg {
+    font-size: var(--text-lg);
+  }
+  .text-xl {
+    font-size: var(--text-xl);
+  }
+  .text-2xl {
+    font-size: var(--text-2xl);
+  }
+  .text-3xl {
+    font-size: var(--text-3xl);
+  }
+  .text-4xl {
+    font-size: var(--text-4xl);
+  }
+  .text-5xl {
+    font-size: var(--text-5xl);
+  }
+  .text-6xl {
+    font-size: var(--text-6xl);
+  }
+  .text-7xl {
+    font-size: var(--text-7xl);
+  }
+  .text-8xl {
+    font-size: var(--text-8xl);
+  }
+  .text-9xl {
+    font-size: var(--text-9xl);
+  }
+}
+.writing-vertical-lr {
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+}
