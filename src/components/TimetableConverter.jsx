@@ -454,22 +454,24 @@ const TimetableConverter = () => {
 
           {/* JSON Output Section */}
           {jsonOutput && (
-            <div className="space-y-6 sm:space-y-8 lg:space-y-10 animate-fade-in-up">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+            <div className="space-y-4 sm:space-y-6 lg:space-y-8 animate-fade-in-up">
+              <div className="flex flex-col gap-4 sm:gap-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-r from-slate-600 to-gray-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
                     <FileText className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-slate-200" />
                   </div>
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-200">Generated JSON</h2>
-                    <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">Your prayer timetable is ready</p>
+                  <div className="flex-1">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-200">Generated JSON</h2>
+                    <p className="text-slate-400 text-sm sm:text-base mt-1 sm:mt-2">Your prayer timetable is ready</p>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                
+                {/* Action Buttons - Always in one line */}
+                <div className="flex flex-row gap-2 sm:gap-3 lg:gap-4">
                   <Button
                     variant="outline"
                     onClick={handleCopyToClipboard}
-                    className={`h-12 sm:h-14 px-6 sm:px-8 flex items-center gap-2 sm:gap-3 transition-all duration-300 text-sm sm:text-base lg:text-lg font-semibold ${
+                    className={`flex-1 h-10 sm:h-12 px-3 sm:px-4 lg:px-6 flex items-center justify-center gap-2 transition-all duration-300 text-xs sm:text-sm lg:text-base font-semibold ${
                       copied 
                         ? 'bg-slate-600/20 border-slate-400 text-slate-300' 
                         : 'bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30'
@@ -477,34 +479,38 @@ const TimetableConverter = () => {
                   >
                     {copied ? (
                       <>
-                        <Check className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
-                        Copied!
+                        <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Copied!</span>
+                        <span className="xs:hidden">✓</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
-                        Copy JSON
+                        <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Copy JSON</span>
+                        <span className="xs:hidden">Copy</span>
                       </>
                     )}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleDownloadJSON}
-                    className="h-12 sm:h-14 px-6 sm:px-8 bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30 transition-all duration-300 flex items-center gap-2 sm:gap-3 text-sm sm:text-base lg:text-lg font-semibold"
+                    className="flex-1 h-10 sm:h-12 px-3 sm:px-4 lg:px-6 bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30 transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm lg:text-base font-semibold"
                   >
-                    <Download className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
-                    Download
+                    <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline">Download</span>
+                    <span className="xs:hidden">Save</span>
                   </Button>
                 </div>
               </div>
               
-              <div className="bg-slate-900/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 xl:p-10 overflow-auto max-h-[300px] sm:max-h-[400px] lg:max-h-[500px] shadow-2xl border border-slate-700/50 relative">
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-1 sm:gap-2">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
+              {/* JSON Content - Fully Responsive */}
+              <div className="bg-slate-900/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 overflow-auto shadow-2xl border border-slate-700/50 relative">
+                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex gap-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 </div>
-                <pre className="text-slate-300 text-xs sm:text-sm lg:text-base whitespace-pre-wrap font-mono leading-relaxed pt-4 sm:pt-6">
+                <pre className="text-slate-300 text-xs sm:text-sm lg:text-base whitespace-pre-wrap font-mono leading-relaxed pt-3 sm:pt-4 overflow-x-auto">
                   {jsonOutput}
                 </pre>
               </div>
