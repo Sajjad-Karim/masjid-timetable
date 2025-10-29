@@ -17,7 +17,6 @@ const SimpleDatePicker = ({ date, setDate, placeholder = "Select date" }) => {
         )}
         calendarClassName="react-datepicker-custom-calendar"
         dayClassName={() => "react-datepicker__day"}
-        minDate={new Date()}
       />
       <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 pointer-events-none" />
     </div>

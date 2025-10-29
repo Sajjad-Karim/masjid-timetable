@@ -1,9 +1,8 @@
 /* IMPORTS */
-@charset "UTF-8";
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "react-datepicker/dist/react-datepicker.css";
+@import "./styles/react-datepicker.css";
 
 /* React DatePicker Glass Theme */
 .react-datepicker {
@@ -305,6 +304,26 @@
   .text-9xl {
     font-size: var(--text-9xl);
   }
+}
+.json-output {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(148, 163, 184, 0.8) transparent; /* thumb track */
+}
+.json-output::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.json-output::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4); /* slate-900/40 */
+  border-radius: 0.5rem;
+}
+.json-output::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.8); /* slate-400 */
+  border-radius: 0.5rem;
+  border: 2px solid rgba(15, 23, 42, 0.4);
+}
+.json-output::-webkit-scrollbar-thumb:hover {
+  background: rgba(203, 213, 225, 0.9); /* slate-300 */
 }
 .writing-vertical-lr {
   writing-mode: vertical-lr;

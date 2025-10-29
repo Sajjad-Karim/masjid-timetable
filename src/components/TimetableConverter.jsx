@@ -1,13 +1,28 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from './ui/button';
-import SimpleDatePicker from './ui/simple-date-picker';
-import { Upload, Calendar, FileText, Copy, Check, Download, AlertCircle, CheckCircle, Clock, Sun, Moon, Star, Sparkles, Zap, Shield } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import React, { useState, useRef, useEffect } from "react";
+import { Button } from "./ui/button";
+import SimpleDatePicker from "./ui/simple-date-picker";
+import {
+  Upload,
+  Calendar,
+  FileText,
+  Copy,
+  Check,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Sun,
+  Moon,
+  Star,
+  Sparkles,
+  Zap,
+  Shield,
+} from "lucide-react";
+import * as XLSX from "xlsx";
 
 const TimetableConverter = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [startDate, setStartDate] = useState(null);
-  const [jsonOutput, setJsonOutput] = useState('');
+  const [jsonOutput, setJsonOutput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -39,18 +54,22 @@ const TimetableConverter = () => {
     const file = event.target.files[0];
     if (file) {
       const validTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel'
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
       ];
-      
-      if (validTypes.includes(file.type) || file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+
+      if (
+        validTypes.includes(file.type) ||
+        file.name.toLowerCase().endsWith(".xlsx") ||
+        file.name.toLowerCase().endsWith(".xls")
+      ) {
         setSelectedFile(file);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
       } else {
-        alert('Please select a valid Excel file (.xlsx or .xls)');
+        alert("Please select a valid Excel file (.xlsx or .xls)");
         if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          fileInputRef.current.value = "";
         }
       }
     }
@@ -62,16 +81,20 @@ const TimetableConverter = () => {
     const file = event.dataTransfer.files[0];
     if (file) {
       const validTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel'
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
       ];
-      
-      if (validTypes.includes(file.type) || file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+
+      if (
+        validTypes.includes(file.type) ||
+        file.name.toLowerCase().endsWith(".xlsx") ||
+        file.name.toLowerCase().endsWith(".xls")
+      ) {
         setSelectedFile(file);
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
       } else {
-        alert('Please select a valid Excel file (.xlsx or .xls)');
+        alert("Please select a valid Excel file (.xlsx or .xls)");
       }
     }
   };
@@ -86,60 +109,92 @@ const TimetableConverter = () => {
     setDragActive(false);
   };
 
-  const convertTimeTo24Hour = (timeString) => {
-    if (!timeString) return '';
-    
-    const time = timeString.toString().trim();
-    
-    // If already in 24-hour format (HH:MM), return as is
-    if (time.match(/^\d{1,2}:\d{2}$/) && !time.toLowerCase().includes('am') && !time.toLowerCase().includes('pm')) {
-      return time;
+  const convertTimeTo24Hour = (raw) => {
+    if (raw === undefined || raw === null || raw === "") return "";
+
+    // Excel numeric time (fraction of a day)
+    if (typeof raw === "number") {
+      const totalMinutes = Math.round(raw * 24 * 60);
+      const hours = Math.floor(totalMinutes / 60) % 24;
+      const minutes = totalMinutes % 60;
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}`;
     }
-    
-    // Handle 12-hour format conversion
+
+    const time = String(raw).trim();
+
+    // Already 24-hour HH:MM
+    if (/^\d{1,2}:\d{2}$/.test(time) && !/(am|pm)/i.test(time)) {
+      const [h, m] = time.split(":");
+      const hours = Math.min(23, Math.max(0, parseInt(h, 10)));
+      const minutes = Math.min(59, Math.max(0, parseInt(m, 10)));
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
+    // 12-hour H:MM AM/PM
     const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)/i;
     const match = time.match(timeRegex);
-    
     if (match) {
-      let hours = parseInt(match[1]);
+      let hours = parseInt(match[1], 10);
       const minutes = match[2];
       const period = match[3].toUpperCase();
-      
-      if (period === 'AM' && hours === 12) {
-        hours = 0;
-      } else if (period === 'PM' && hours !== 12) {
-        hours += 12;
-      }
-      
-      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+      if (period === "AM" && hours === 12) hours = 0;
+      if (period === "PM" && hours !== 12) hours += 12;
+      return `${hours.toString().padStart(2, "0")}:${minutes}`;
     }
-    
-    // If no valid format found, return empty string
-    return '';
+
+    return "";
+  };
+
+  const looksLikeTimeCell = (value) => {
+    if (value === undefined || value === null) return false;
+    if (typeof value === "number") return true; // numeric excel time
+    const s = String(value).trim();
+    if (/^\d{1,2}:\d{2}(\s*(AM|PM))?$/i.test(s)) return true;
+    return false;
+  };
+
+  const findFirstDataRowIndex = (rows) => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const timeLikeCount = row.reduce(
+        (acc, cell) => acc + (looksLikeTimeCell(cell) ? 1 : 0),
+        0
+      );
+      // If a row has at least 3 time-like cells, treat it as the first data row
+      if (timeLikeCount >= 3) return i;
+    }
+    return 1; // fallback
   };
 
   const formatDateToYYYYMMDD = (date) => {
     const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}${month}${day}`;
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
 
   const generateJSON = async () => {
     if (!selectedFile || !startDate) {
-      alert('Please select an Excel file and choose a start date');
+      alert("Please select an Excel file and choose a start date");
       return;
     }
 
     setIsProcessing(true);
-    setJsonOutput('');
+    setJsonOutput("");
 
     try {
       const data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
-            const workbook = XLSX.read(e.target.result, { type: 'binary' });
+            const arrayBuffer = e.target.result;
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), {
+              type: "array",
+            });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -149,14 +204,17 @@ const TimetableConverter = () => {
           }
         };
         reader.onerror = reject;
-        reader.readAsBinaryString(selectedFile);
+        reader.readAsArrayBuffer(selectedFile);
       });
 
-      // Skip the first row (headers) and filter out empty rows
-      const timetableData = data.slice(1).filter(row => row && row.length > 0);
-      
+      // Skip header rows dynamically and filter out empty rows
+      const startIdx = findFirstDataRowIndex(data);
+      const timetableData = data
+        .slice(startIdx)
+        .filter((row) => row && row.length > 0);
+
       if (timetableData.length === 0) {
-        alert('No data found in the Excel file. Please check the file format.');
+        alert("No data found in the Excel file. Please check the file format.");
         return;
       }
 
@@ -168,38 +226,52 @@ const TimetableConverter = () => {
         const dateKey = formatDateToYYYYMMDD(currentDate);
 
         // Ensure we have at least 10 columns for all prayer times
-        const paddedRow = [...row, '', '', '', '', '', '', '', '', '', ''].slice(0, 10);
+        const paddedRow = [
+          ...row,
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+        ].slice(0, 10);
 
         result[dateKey] = {
           fajr: {
-            start: convertTimeTo24Hour(paddedRow[0] || ''),
-            jamat: convertTimeTo24Hour(paddedRow[1] || '')
+            start: convertTimeTo24Hour(paddedRow[0] || ""),
+            jamat: convertTimeTo24Hour(paddedRow[1] || ""),
           },
           sunrise: {
-            start: convertTimeTo24Hour(paddedRow[2] || '')
+            start: convertTimeTo24Hour(paddedRow[2] || ""),
           },
           dhuhr: {
-            start: convertTimeTo24Hour(paddedRow[3] || ''),
-            jamat: convertTimeTo24Hour(paddedRow[4] || '')
+            start: convertTimeTo24Hour(paddedRow[3] || ""),
+            jamat: convertTimeTo24Hour(paddedRow[4] || ""),
           },
           asr: {
-            start: convertTimeTo24Hour(paddedRow[5] || ''),
-            jamat: convertTimeTo24Hour(paddedRow[6] || '')
+            start: convertTimeTo24Hour(paddedRow[5] || ""),
+            jamat: convertTimeTo24Hour(paddedRow[6] || ""),
           },
           maghrib: {
-            start: convertTimeTo24Hour(paddedRow[7] || '')
+            start: convertTimeTo24Hour(paddedRow[7] || ""),
           },
           isha: {
-            start: convertTimeTo24Hour(paddedRow[8] || ''),
-            jamat: convertTimeTo24Hour(paddedRow[9] || '')
-          }
+            start: convertTimeTo24Hour(paddedRow[8] || ""),
+            jamat: convertTimeTo24Hour(paddedRow[9] || ""),
+          },
         };
       });
 
       setJsonOutput(JSON.stringify(result, null, 2));
     } catch (error) {
-      console.error('Error processing file:', error);
-      alert('Error processing the Excel file. Please check the file format and ensure it contains prayer time data.');
+      console.error("Error processing file:", error);
+      alert(
+        "Error processing the Excel file. Please check the file format and ensure it contains prayer time data."
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -211,16 +283,16 @@ const TimetableConverter = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      console.error("Failed to copy:", error);
     }
   };
 
   const handleDownloadJSON = () => {
-    const blob = new Blob([jsonOutput], { type: 'application/json' });
+    const blob = new Blob([jsonOutput], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'timetable.json';
+    a.download = "timetable.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -230,10 +302,10 @@ const TimetableConverter = () => {
   const handleClearAll = () => {
     setSelectedFile(null);
     setStartDate(null);
-    setJsonOutput('');
+    setJsonOutput("");
     setCopied(false);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -245,7 +317,7 @@ const TimetableConverter = () => {
         <div className="absolute top-0 -left-4 w-48 h-48 sm:w-72 sm:h-72 bg-slate-700 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
         <div className="absolute top-0 -right-4 w-48 h-48 sm:w-72 sm:h-72 bg-gray-600 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-48 h-48 sm:w-72 sm:h-72 bg-slate-800 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
-        
+
         {/* Floating Particles */}
         {particles.map((particle) => (
           <div
@@ -259,19 +331,26 @@ const TimetableConverter = () => {
             }}
           />
         ))}
-        
+
         {/* Grid Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="w-full h-full" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            backgroundRepeat: 'repeat'
-          }}></div>
+          <div
+            className="w-full h-full"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundRepeat: "repeat",
+            }}
+          ></div>
         </div>
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto p-3 sm:p-6 lg:p-8">
         {/* Header with Advanced Animations */}
-        <div className={`text-center mb-12 sm:mb-16 lg:mb-20 transition-all duration-2000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div
+          className={`text-center mb-12 sm:mb-16 lg:mb-20 transition-all duration-2000 ${
+            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+        >
           <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-gradient-to-r from-slate-700 via-gray-700 to-slate-800 rounded-2xl sm:rounded-3xl mb-6 sm:mb-8 lg:mb-10 shadow-2xl">
             <Moon className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-slate-200" />
           </div>
@@ -279,38 +358,49 @@ const TimetableConverter = () => {
             Masjid Timetable Converter
           </h1>
           <p className="text-lg sm:text-xl lg:text-2xl text-slate-300 max-w-4xl mx-auto leading-relaxed animate-fade-in-up mb-2 sm:mb-3 lg:mb-4 px-4">
-            Transform your Excel prayer timetables into professional JSON format with precision
+            Transform your Excel prayer timetables into professional JSON format
+            with precision
           </p>
           <p className="text-sm sm:text-base lg:text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed animate-fade-in-up px-4">
-            Designed specifically for masjid management systems with automated time conversion and date progression
+            Designed specifically for masjid management systems with automated
+            time conversion and date progression
           </p>
-          
+
           {/* Feature Badges - Responsive Grid */}
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4 lg:gap-6 mt-8 sm:mt-10 lg:mt-12 px-4">
             <div className="flex items-center gap-2 sm:gap-3 bg-slate-800/60 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 animate-slide-in-left border border-slate-600/30">
               <div className="w-6 h-6 sm:w-8 sm:h-8 bg-slate-600/50 rounded-full flex items-center justify-center">
                 <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-slate-300" />
               </div>
-              <span className="text-slate-200 text-xs sm:text-sm font-semibold">Lightning Fast</span>
+              <span className="text-slate-200 text-xs sm:text-sm font-semibold">
+                Lightning Fast
+              </span>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 bg-slate-800/60 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 animate-slide-in-right border border-slate-600/30">
               <div className="w-6 h-6 sm:w-8 sm:h-8 bg-slate-600/50 rounded-full flex items-center justify-center">
                 <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-slate-300" />
               </div>
-              <span className="text-slate-200 text-xs sm:text-sm font-semibold">Secure Processing</span>
+              <span className="text-slate-200 text-xs sm:text-sm font-semibold">
+                Secure Processing
+              </span>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 bg-slate-800/60 backdrop-blur-sm rounded-full px-4 py-2 sm:px-6 sm:py-3 animate-slide-in-up border border-slate-600/30">
               <div className="w-6 h-6 sm:w-8 sm:h-8 bg-slate-600/50 rounded-full flex items-center justify-center">
                 <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-slate-300" />
               </div>
-              <span className="text-slate-200 text-xs sm:text-sm font-semibold">Smart Conversion</span>
+              <span className="text-slate-200 text-xs sm:text-sm font-semibold">
+                Smart Conversion
+              </span>
             </div>
           </div>
         </div>
 
         {/* Main Content Card */}
-        <div className={`bg-slate-800/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-600/30 p-4 sm:p-6 lg:p-8 xl:p-12 space-y-8 sm:space-y-12 lg:space-y-16 transition-all duration-2000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          
+        <div
+          className={`bg-slate-800/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-600/30 p-4 sm:p-6 lg:p-8 xl:p-12 space-y-8 sm:space-y-12 lg:space-y-16 transition-all duration-2000 ${
+            isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+        >
           {/* File Upload Section */}
           <div className="space-y-6 sm:space-y-8 lg:space-y-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
@@ -318,18 +408,22 @@ const TimetableConverter = () => {
                 <Upload className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-slate-200" />
               </div>
               <div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-200">Upload Excel File</h2>
-                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">Select your prayer timetable spreadsheet</p>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-200">
+                  Upload Excel File
+                </h2>
+                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
+                  Select your prayer timetable spreadsheet
+                </p>
               </div>
             </div>
-            
+
             <div
               className={`relative border-2 border-dashed rounded-2xl sm:rounded-3xl p-8 sm:p-12 lg:p-16 text-center transition-all duration-500 ${
-                selectedFile 
-                  ? 'border-slate-400 bg-gradient-to-br from-slate-600/20 to-gray-600/20 shadow-2xl' 
+                selectedFile
+                  ? "border-slate-400 bg-gradient-to-br from-slate-600/20 to-gray-600/20 shadow-2xl"
                   : dragActive
-                  ? 'border-slate-500 bg-gradient-to-br from-slate-600/20 to-gray-600/20 shadow-2xl'
-                  : 'border-slate-600/50 hover:border-slate-500 hover:shadow-xl'
+                  ? "border-slate-500 bg-gradient-to-br from-slate-600/20 to-gray-600/20 shadow-2xl"
+                  : "border-slate-600/50 hover:border-slate-500 hover:shadow-xl"
               }`}
               onDrop={handleFileDrop}
               onDragOver={handleDragOver}
@@ -342,16 +436,22 @@ const TimetableConverter = () => {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              
+
               {selectedFile ? (
                 <div className="space-y-4 sm:space-y-6">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-slate-600 to-gray-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto shadow-2xl animate-bounce">
                     <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-slate-200" />
                   </div>
                   <div>
-                    <p className="text-slate-300 font-bold text-lg sm:text-xl lg:text-2xl break-all">{selectedFile.name}</p>
-                    <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">File uploaded successfully</p>
-                    <p className="text-slate-500 text-xs sm:text-sm mt-2 sm:mt-3">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                    <p className="text-slate-300 font-bold text-lg sm:text-xl lg:text-2xl break-all">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
+                      File uploaded successfully
+                    </p>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-2 sm:mt-3">
+                      {(selectedFile.size / 1024).toFixed(1)} KB
+                    </p>
                   </div>
                   {showSuccess && (
                     <div className="absolute inset-0 bg-slate-600/20 rounded-2xl sm:rounded-3xl animate-ping"></div>
@@ -359,33 +459,41 @@ const TimetableConverter = () => {
                 </div>
               ) : (
                 <div className="space-y-4 sm:space-y-6">
-                  <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl sm:rounded-3xl flex items-center justify-center transition-all duration-300 ${
-                    dragActive 
-                      ? 'bg-gradient-to-r from-slate-600 to-gray-600' 
-                      : 'bg-gradient-to-r from-slate-700/50 to-gray-700/50'
-                  }`}>
+                  <div
+                    className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl sm:rounded-3xl flex items-center justify-center transition-all duration-300 ${
+                      dragActive
+                        ? "bg-gradient-to-r from-slate-600 to-gray-600"
+                        : "bg-gradient-to-r from-slate-700/50 to-gray-700/50"
+                    }`}
+                  >
                     <Upload className="w-8 h-8 sm:w-10 sm:h-10 text-slate-300" />
                   </div>
                   <div>
                     <p className="text-slate-200 font-bold text-lg sm:text-xl lg:text-2xl">
-                      {dragActive ? 'Drop your file here' : 'Drag and drop your Excel file'}
+                      {dragActive
+                        ? "Drop your file here"
+                        : "Drag and drop your Excel file"}
                     </p>
-                    <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">or click to browse files</p>
-                    <p className="text-slate-500 text-xs sm:text-sm mt-2 sm:mt-3">Supports .xlsx and .xls formats</p>
+                    <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
+                      or click to browse files
+                    </p>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-2 sm:mt-3">
+                      Supports .xlsx and .xls formats
+                    </p>
                   </div>
                 </div>
               )}
-              
+
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 className={`mt-6 sm:mt-8 h-12 sm:h-14 px-6 sm:px-8 text-base sm:text-lg font-semibold transition-all duration-300 ${
-                  selectedFile 
-                    ? 'bg-slate-600/20 border-slate-400 text-slate-300 hover:bg-slate-600/30' 
-                    : 'bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30 hover:shadow-xl'
+                  selectedFile
+                    ? "bg-slate-600/20 border-slate-400 text-slate-300 hover:bg-slate-600/30"
+                    : "bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30 hover:shadow-xl"
                 }`}
               >
-                {selectedFile ? 'Change File' : 'Select Excel File'}
+                {selectedFile ? "Change File" : "Select Excel File"}
               </Button>
             </div>
           </div>
@@ -397,14 +505,18 @@ const TimetableConverter = () => {
                 <Calendar className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-slate-200" />
               </div>
               <div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-200">Select Start Date</h2>
-                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">Choose the first day of your prayer timetable</p>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-200">
+                  Select Start Date
+                </h2>
+                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
+                  Choose the first day of your prayer timetable
+                </p>
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-r from-slate-700/20 to-gray-700/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-slate-600/30 backdrop-blur-sm">
-              <SimpleDatePicker 
-                date={startDate} 
+              <SimpleDatePicker
+                date={startDate}
                 setDate={setStartDate}
                 placeholder="Select start date"
               />
@@ -414,18 +526,22 @@ const TimetableConverter = () => {
           {/* Action Buttons */}
           <div className="space-y-4 sm:space-y-6">
             <div className="text-center">
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-200 mb-1 sm:mb-2">Ready to Convert?</h3>
-              <p className="text-slate-400 text-sm sm:text-base">Generate your professional JSON timetable</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-200 mb-1 sm:mb-2">
+                Ready to Convert?
+              </h3>
+              <p className="text-slate-400 text-sm sm:text-base">
+                Generate your professional JSON timetable
+              </p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
               <Button
                 onClick={generateJSON}
                 disabled={!selectedFile || !startDate || isProcessing}
                 className={`flex-1 h-16 sm:h-20 text-lg sm:text-xl lg:text-2xl font-bold transition-all duration-300 ${
-                  isProcessing 
-                    ? 'bg-slate-600 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-slate-700 via-gray-700 to-slate-800 hover:from-slate-600 hover:via-gray-600 hover:to-slate-700 hover:shadow-2xl'
+                  isProcessing
+                    ? "bg-slate-600 cursor-not-allowed"
+                    : "bg-gradient-to-r from-slate-700 via-gray-700 to-slate-800 hover:from-slate-600 hover:via-gray-600 hover:to-slate-700 hover:shadow-2xl"
                 }`}
               >
                 {isProcessing ? (
@@ -440,7 +556,7 @@ const TimetableConverter = () => {
                   </div>
                 )}
               </Button>
-              
+
               <Button
                 variant="outline"
                 onClick={handleClearAll}
@@ -461,20 +577,24 @@ const TimetableConverter = () => {
                     <FileText className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-slate-200" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-200">Generated JSON</h2>
-                    <p className="text-slate-400 text-sm sm:text-base mt-1 sm:mt-2">Your prayer timetable is ready</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-200">
+                      Generated JSON
+                    </h2>
+                    <p className="text-slate-400 text-sm sm:text-base mt-1 sm:mt-2">
+                      Your prayer timetable is ready
+                    </p>
                   </div>
                 </div>
-                
+
                 {/* Action Buttons - Always in one line */}
                 <div className="flex flex-row gap-2 sm:gap-3 lg:gap-4">
                   <Button
                     variant="outline"
                     onClick={handleCopyToClipboard}
                     className={`flex-1 h-10 sm:h-12 px-3 sm:px-4 lg:px-6 flex items-center justify-center gap-2 transition-all duration-300 text-xs sm:text-sm lg:text-base font-semibold ${
-                      copied 
-                        ? 'bg-slate-600/20 border-slate-400 text-slate-300' 
-                        : 'bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30'
+                      copied
+                        ? "bg-slate-600/20 border-slate-400 text-slate-300"
+                        : "bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30"
                     }`}
                   >
                     {copied ? (
@@ -491,26 +611,17 @@ const TimetableConverter = () => {
                       </>
                     )}
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadJSON}
-                    className="flex-1 h-10 sm:h-12 px-3 sm:px-4 lg:px-6 bg-slate-700/20 border-slate-500 text-slate-200 hover:bg-slate-700/30 transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm lg:text-base font-semibold"
-                  >
-                    <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden xs:inline">Download</span>
-                    <span className="xs:hidden">Save</span>
-                  </Button>
                 </div>
               </div>
-              
+
               {/* JSON Content - Fully Responsive */}
-              <div className="bg-slate-900/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 overflow-auto shadow-2xl border border-slate-700/50 relative">
+              <div className="json-output bg-slate-900/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 overflow-auto shadow-2xl border border-slate-700/50 relative max-h-[55vh] sm:max-h-[60vh] lg:max-h-[70vh]">
                 <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex gap-1">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 </div>
-                <pre className="text-slate-300 text-xs sm:text-sm lg:text-base whitespace-pre-wrap font-mono leading-relaxed pt-3 sm:pt-4 overflow-x-auto">
+                <pre className="text-slate-300 text-xs sm:text-sm lg:text-base whitespace-pre font-mono leading-relaxed pt-3 sm:pt-4 min-w-full">
                   {jsonOutput}
                 </pre>
               </div>
@@ -524,38 +635,50 @@ const TimetableConverter = () => {
                 <AlertCircle className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-slate-200" />
               </div>
               <div>
-                <h3 className="text-2xl sm:text-3xl font-bold text-slate-300">How to Use</h3>
-                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">Follow these steps to convert your timetable</p>
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-300">
+                  How to Use
+                </h3>
+                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
+                  Follow these steps to convert your timetable
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               <div className="space-y-4 sm:space-y-6">
                 {[
-                  'Upload an Excel file (.xlsx or .xls) containing your prayer timetable',
-                  'The first row should contain headers (will be automatically ignored)',
-                  'Select the start date for your timetable (first day of prayers)',
-                  'Click "Generate JSON" to process your data'
+                  "Upload an Excel file (.xlsx or .xls) containing your prayer timetable",
+                  "The first row should contain headers (will be automatically ignored)",
+                  "Select the start date for your timetable (first day of prayers)",
+                  'Click "Generate JSON" to process your data',
                 ].map((instruction, index) => (
                   <div key={index} className="flex items-start gap-4 sm:gap-6">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-600/40 rounded-full flex items-center justify-center mt-1 animate-pulse border border-slate-500/30 flex-shrink-0">
-                      <span className="text-slate-200 text-sm sm:text-lg font-bold">{index + 1}</span>
+                      <span className="text-slate-200 text-sm sm:text-lg font-bold">
+                        {index + 1}
+                      </span>
                     </div>
-                    <p className="text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed">{instruction}</p>
+                    <p className="text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed">
+                      {instruction}
+                    </p>
                   </div>
                 ))}
               </div>
               <div className="space-y-4 sm:space-y-6">
                 {[
-                  'Each row will automatically be assigned to consecutive dates',
-                  'Times can be in 12-hour (1:00 PM) or 24-hour (13:00) format',
-                  'The tool will automatically convert all times to 24-hour format',
-                  'Download or copy the JSON for use in your masjid display system'
+                  "Each row will automatically be assigned to consecutive dates",
+                  "Times can be in 12-hour (1:00 PM) or 24-hour (13:00) format",
+                  "The tool will automatically convert all times to 24-hour format",
+                  "Download or copy the JSON for use in your masjid display system",
                 ].map((instruction, index) => (
                   <div key={index} className="flex items-start gap-4 sm:gap-6">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-600/40 rounded-full flex items-center justify-center mt-1 animate-pulse border border-slate-500/30 flex-shrink-0">
-                      <span className="text-slate-200 text-sm sm:text-lg font-bold">{index + 5}</span>
+                      <span className="text-slate-200 text-sm sm:text-lg font-bold">
+                        {index + 5}
+                      </span>
                     </div>
-                    <p className="text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed">{instruction}</p>
+                    <p className="text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed">
+                      {instruction}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -570,26 +693,71 @@ const TimetableConverter = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-500/10 to-gray-500/10 rounded-xl sm:rounded-2xl animate-ping"></div>
               </div>
               <div>
-                <h3 className="text-2xl sm:text-3xl font-bold text-slate-300">Prayer Times Structure</h3>
-                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">Your JSON will include all five daily prayers</p>
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-300">
+                  Prayer Times Structure
+                </h3>
+                <p className="text-slate-400 text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
+                  Your JSON will include all five daily prayers
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
               {[
-                { name: 'Fajr', icon: Sun, color: 'from-slate-600 to-gray-600', time: 'Dawn', description: 'Morning prayer before sunrise' },
-                { name: 'Dhuhr', icon: Sun, color: 'from-slate-700 to-gray-700', time: 'Midday', description: 'Noon prayer after sun passes zenith' },
-                { name: 'Asr', icon: Sun, color: 'from-gray-700 to-slate-700', time: 'Afternoon', description: 'Afternoon prayer before sunset' },
-                { name: 'Maghrib', icon: Moon, color: 'from-slate-800 to-gray-800', time: 'Sunset', description: 'Evening prayer after sunset' },
-                { name: 'Isha', icon: Moon, color: 'from-gray-800 to-slate-800', time: 'Night', description: 'Night prayer after twilight' }
+                {
+                  name: "Fajr",
+                  icon: Sun,
+                  color: "from-slate-600 to-gray-600",
+                  time: "Dawn",
+                  description: "Morning prayer before sunrise",
+                },
+                {
+                  name: "Dhuhr",
+                  icon: Sun,
+                  color: "from-slate-700 to-gray-700",
+                  time: "Midday",
+                  description: "Noon prayer after sun passes zenith",
+                },
+                {
+                  name: "Asr",
+                  icon: Sun,
+                  color: "from-gray-700 to-slate-700",
+                  time: "Afternoon",
+                  description: "Afternoon prayer before sunset",
+                },
+                {
+                  name: "Maghrib",
+                  icon: Moon,
+                  color: "from-slate-800 to-gray-800",
+                  time: "Sunset",
+                  description: "Evening prayer after sunset",
+                },
+                {
+                  name: "Isha",
+                  icon: Moon,
+                  color: "from-gray-800 to-slate-800",
+                  time: "Night",
+                  description: "Night prayer after twilight",
+                },
               ].map((prayer, index) => (
-                <div key={index} className="text-center group transition-all duration-300">
-                  <div className={`w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-r ${prayer.color} rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg group-hover:shadow-2xl transition-all duration-300 relative`}>
+                <div
+                  key={index}
+                  className="text-center group transition-all duration-300"
+                >
+                  <div
+                    className={`w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-r ${prayer.color} rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg group-hover:shadow-2xl transition-all duration-300 relative`}
+                  >
                     <prayer.icon className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 text-slate-200" />
                     <div className="absolute inset-0 bg-gradient-to-r from-slate-500/10 to-gray-500/10 rounded-2xl sm:rounded-3xl animate-ping"></div>
                   </div>
-                  <h4 className="text-slate-300 font-bold text-sm sm:text-base lg:text-lg mb-1">{prayer.name}</h4>
-                  <p className="text-slate-400 text-xs sm:text-sm mb-1">{prayer.time}</p>
-                  <p className="text-slate-500 text-xs leading-tight">{prayer.description}</p>
+                  <h4 className="text-slate-300 font-bold text-sm sm:text-base lg:text-lg mb-1">
+                    {prayer.name}
+                  </h4>
+                  <p className="text-slate-400 text-xs sm:text-sm mb-1">
+                    {prayer.time}
+                  </p>
+                  <p className="text-slate-500 text-xs leading-tight">
+                    {prayer.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -597,7 +765,7 @@ const TimetableConverter = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes blob {
           0% {
             transform: translate(0px, 0px) scale(1);
