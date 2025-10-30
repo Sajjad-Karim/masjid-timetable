@@ -131,10 +131,23 @@ const TimetableConverter = () => {
       const [h, m] = time.split(":");
       let hours = parseInt(h, 10);
       const minutes = Math.min(59, Math.max(0, parseInt(m, 10)));
-      const isMorningPrayer = prayerKey === "fajr" || prayerKey === "sunrise";
-      if (!isMorningPrayer && hours >= 1 && hours <= 11) {
-        hours += 12;
+
+      if (prayerKey === "dhuhr") {
+        // Special rule:
+        // 11:00-11:59 => AM (stay 11:xx)
+        // 12:00-12:59 => PM (stay 12:xx)
+        // 1:00-10:59 => PM (add 12)
+        if (hours >= 1 && hours <= 10) {
+          hours += 12;
+        }
+        // hours 11 -> 11, hours 12 -> 12
+      } else {
+        const isMorningPrayer = prayerKey === "fajr" || prayerKey === "sunrise";
+        if (!isMorningPrayer && hours >= 1 && hours <= 11) {
+          hours += 12;
+        }
       }
+
       if (hours === 24) hours = 0;
       hours = Math.min(23, Math.max(0, hours));
       return `${hours.toString().padStart(2, "0")}:${minutes
@@ -166,7 +179,17 @@ const TimetableConverter = () => {
     if (!m) return hhmm;
     let hours = parseInt(m[1], 10);
     const minutes = m[2];
-    if (hours >= 1 && hours <= 11) hours += 12;
+
+    if (prayerKey === "dhuhr") {
+      // Apply Dhuhr rule after base conversion
+      if (hours >= 1 && hours <= 10) {
+        hours += 12; // 1-10 treated as PM
+      }
+      // 11 stays 11 (AM), 12 stays 12 (PM)
+    } else {
+      if (hours >= 1 && hours <= 11) hours += 12;
+    }
+
     if (hours === 24) hours = 0;
     return `${hours.toString().padStart(2, "0")}:${minutes}`;
   };
@@ -309,12 +332,12 @@ const TimetableConverter = () => {
         };
       });
 
-      // Render each day's object on its own line
-      const lines = Object.entries(result).map(([dateKey, obj]) => {
-        const dayObj = { [dateKey]: obj };
-        return JSON.stringify(dayObj);
+      // Pretty-print a single JSON object with each date on its own line, comma-separated
+      const entries = Object.entries(result).map(([dateKey, obj]) => {
+        return `  "${dateKey}": ${JSON.stringify(obj)}`;
       });
-      setJsonOutput(lines.join("\n"));
+      const pretty = `{\n${entries.join(",\n")}\n}`;
+      setJsonOutput(pretty);
     } catch (error) {
       console.error("Error processing file:", error);
       alert(
