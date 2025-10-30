@@ -109,7 +109,7 @@ const TimetableConverter = () => {
     setDragActive(false);
   };
 
-  const convertTimeTo24Hour = (raw) => {
+  const convertTimeTo24Hour = (raw, prayerKey) => {
     if (raw === undefined || raw === null || raw === "") return "";
 
     // Excel numeric time (fraction of a day)
@@ -122,31 +122,53 @@ const TimetableConverter = () => {
         .padStart(2, "0")}`;
     }
 
-    const time = String(raw).trim();
+    // Normalize separators and trim
+    let time = String(raw).trim();
+    time = time.replace(/[\.\s]/g, ":"); // support "1.30" or "1 30"
 
-    // Already 24-hour HH:MM
+    // Already HH:MM with no AM/PM → infer from prayerKey
     if (/^\d{1,2}:\d{2}$/.test(time) && !/(am|pm)/i.test(time)) {
       const [h, m] = time.split(":");
-      const hours = Math.min(23, Math.max(0, parseInt(h, 10)));
+      let hours = parseInt(h, 10);
       const minutes = Math.min(59, Math.max(0, parseInt(m, 10)));
+      const isMorningPrayer = prayerKey === "fajr" || prayerKey === "sunrise";
+      if (!isMorningPrayer && hours >= 1 && hours <= 11) {
+        hours += 12;
+      }
+      if (hours === 24) hours = 0;
+      hours = Math.min(23, Math.max(0, hours));
       return `${hours.toString().padStart(2, "0")}:${minutes
         .toString()
         .padStart(2, "0")}`;
     }
 
     // 12-hour H:MM AM/PM
-    const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)/i;
+    const timeRegex = /(\d{1,2}):(\d{1,2})\s*(AM|PM)/i;
     const match = time.match(timeRegex);
     if (match) {
       let hours = parseInt(match[1], 10);
-      const minutes = match[2];
+      const minutes = parseInt(match[2], 10);
       const period = match[3].toUpperCase();
       if (period === "AM" && hours === 12) hours = 0;
       if (period === "PM" && hours !== 12) hours += 12;
-      return `${hours.toString().padStart(2, "0")}:${minutes}`;
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}`;
     }
 
     return "";
+  };
+
+  const enforceAfternoonForNonMorning = (hhmm, prayerKey) => {
+    if (!hhmm) return "";
+    if (prayerKey === "fajr" || prayerKey === "sunrise") return hhmm;
+    const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return hhmm;
+    let hours = parseInt(m[1], 10);
+    const minutes = m[2];
+    if (hours >= 1 && hours <= 11) hours += 12;
+    if (hours === 24) hours = 0;
+    return `${hours.toString().padStart(2, "0")}:${minutes}`;
   };
 
   const looksLikeTimeCell = (value) => {
@@ -242,31 +264,57 @@ const TimetableConverter = () => {
 
         result[dateKey] = {
           fajr: {
-            start: convertTimeTo24Hour(paddedRow[0] || ""),
-            jamat: convertTimeTo24Hour(paddedRow[1] || ""),
+            start: convertTimeTo24Hour(paddedRow[0] || "", "fajr"),
+            jamat: convertTimeTo24Hour(paddedRow[1] || "", "fajr"),
           },
           sunrise: {
-            start: convertTimeTo24Hour(paddedRow[2] || ""),
+            start: convertTimeTo24Hour(paddedRow[2] || "", "sunrise"),
           },
           dhuhr: {
-            start: convertTimeTo24Hour(paddedRow[3] || ""),
-            jamat: convertTimeTo24Hour(paddedRow[4] || ""),
+            start: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[3] || "", "dhuhr"),
+              "dhuhr"
+            ),
+            jamat: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[4] || "", "dhuhr"),
+              "dhuhr"
+            ),
           },
           asr: {
-            start: convertTimeTo24Hour(paddedRow[5] || ""),
-            jamat: convertTimeTo24Hour(paddedRow[6] || ""),
+            start: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[5] || "", "asr"),
+              "asr"
+            ),
+            jamat: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[6] || "", "asr"),
+              "asr"
+            ),
           },
           maghrib: {
-            start: convertTimeTo24Hour(paddedRow[7] || ""),
+            start: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[7] || "", "maghrib"),
+              "maghrib"
+            ),
           },
           isha: {
-            start: convertTimeTo24Hour(paddedRow[8] || ""),
-            jamat: convertTimeTo24Hour(paddedRow[9] || ""),
+            start: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[8] || "", "isha"),
+              "isha"
+            ),
+            jamat: enforceAfternoonForNonMorning(
+              convertTimeTo24Hour(paddedRow[9] || "", "isha"),
+              "isha"
+            ),
           },
         };
       });
 
-      setJsonOutput(JSON.stringify(result, null, 2));
+      // Render each day's object on its own line
+      const lines = Object.entries(result).map(([dateKey, obj]) => {
+        const dayObj = { [dateKey]: obj };
+        return JSON.stringify(dayObj);
+      });
+      setJsonOutput(lines.join("\n"));
     } catch (error) {
       console.error("Error processing file:", error);
       alert(
