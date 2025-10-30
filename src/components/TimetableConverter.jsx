@@ -332,12 +332,24 @@ const TimetableConverter = () => {
         };
       });
 
-      // Pretty-print a single JSON object with each date on its own line, comma-separated
-      const entries = Object.entries(result).map(([dateKey, obj]) => {
-        return `  "${dateKey}": ${JSON.stringify(obj)}`;
+      // Pretty-print to match client's example exactly (inline day object on one line)
+      const order = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
+      const dateKeys = Object.keys(result);
+      const out = [];
+      out.push("{");
+      dateKeys.forEach((dateKey, idx) => {
+        const day = result[dateKey] || {};
+        const prayerStrings = order.map((prayer) => {
+          const item = day[prayer] || {};
+          const parts = [`\"start\": \"${item.start || ""}\"`];
+          if (item.jamat) parts.push(`\"jamat\": \"${item.jamat}\"`);
+          return `\"${prayer}\": { ${parts.join(", ")} }`;
+        });
+        const comma = idx < dateKeys.length - 1 ? "," : "";
+        out.push(`\"${dateKey}\": { ${prayerStrings.join(", ")} }${comma}`);
       });
-      const pretty = `{\n${entries.join(",\n")}\n}`;
-      setJsonOutput(pretty);
+      out.push("}");
+      setJsonOutput(out.join("\n"));
     } catch (error) {
       console.error("Error processing file:", error);
       alert(
